@@ -1,0 +1,6 @@
+Toy server and client demonstrating basic sockets and continuous listening
+on a port where server essentially echoes everything client(s) send(s).
+
+Clients automatically connect to server on port 8888; enter "q" to disconnect.
+
+"make clean" then "make"
