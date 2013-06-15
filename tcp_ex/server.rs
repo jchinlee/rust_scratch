@@ -56,12 +56,11 @@ fn process_request(request : ~[u8]) -> MyResult {
  */
 fn new_connect_cb_single(new_conn : &tcp::TcpNewConnection, kill_ch : &comm::SharedChan<Option<tcp::TcpErrData>>)
             -> result::Result<(), tcp::TcpErrData> {
-    // accept the connection; abort if unable
-    let a = tcp::accept(*new_conn);
-    if result::is_err(&a) { return result::Err(result::get_err(&a)); }
-
-    // extract the socket from the connection
-    let sock = result::unwrap(a);
+    // accept the connection; abort if unable, extract socket otherwise
+    let sock = match tcp::accept(*new_conn) {
+        result::Err(e) => return result::Err(e),
+        result::Ok(s) => s,
+    };
 
     // print info on client that connected
     let client_addr = sock.get_peer_addr();
@@ -69,19 +68,20 @@ fn new_connect_cb_single(new_conn : &tcp::TcpNewConnection, kill_ch : &comm::Sha
     let client_port = ip::get_port(&client_addr);
     println(fmt!("server connected to %s:%u", client_ip, client_port));
 
-    // begin continuous read; abort if unable
-    let r = sock.read_start();
-    if result::is_err(&r) { return result::Err(result::get_err(&r)); }
+    // begin continuous read; abort if unable, extract port over which to read otherwise
+    let read_po = match sock.read_start() {
+        result::Err(e) => return result::Err(e),
+        result::Ok(r) => r,
+    };
 
-    // extract the port over which we read
-    let read_po = result::unwrap(r);
     loop {
         // get a request
-        let v = read_po.recv();
-        if result::is_err(&v) { return result::Err(result::get_err(&v)); }
+        let request = match read_po.recv() {
+            result::Err(e) => return result::Err(e),
+            result::Ok(v) => v,
+        };
 
         // process the request
-        let request = result::unwrap(v);
         match process_request(request) {
             MyErr(0) => {
                 // exit(0), so stop reading from socket and disconnect

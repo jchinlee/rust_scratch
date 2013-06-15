@@ -61,26 +61,25 @@ fn connect_to_server_wrap(server_ip_str : ~str, server_port : uint) -> result::R
     let server_ip = ip::v4::parse_addr(server_ip_str);
     let iotask = uv::global_loop::get();
 
-    // connect to server; abort if unable
-    let conn = tcp::connect(server_ip, server_port, &iotask);
-    if result::is_err(&conn) {
-        // rewrap the error: gross
-        return match result::get_err(&conn) {
-            tcp::GenericConnectErr(ename, emsg) => result::Err(tcp::TcpErrData { err_name : ename, err_msg : emsg }),
-            tcp::ConnectionRefused => result::Err(tcp::TcpErrData  { err_name : ~"EHOSTNOTFOUND", err_msg : ~"Invalid IP or port"}),
+    // connect to server; abort if unable, extract socket otherwise
+    let sock = match tcp::connect(server_ip, server_port, &iotask) {
+        result::Err(e) => {
+            // rewrap the error : gross
+            return match e {
+                tcp::GenericConnectErr(ename, emsg) => result::Err(tcp::TcpErrData { err_name : ename, err_msg : emsg }),
+                tcp::ConnectionRefused => result::Err(tcp::TcpErrData  { err_name : ~"EHOSTNOTFOUND", err_msg : ~"Invalid IP or port"}),
+            }
         }
-    }
+        result::Ok(s) => s,
+    };
 
-    // extract socket
-    let sock = result::unwrap(conn);
-
-    // begin continuous read; abort if unable
-    let rs = sock.read_start();
-    if result::is_err(&rs) { return result::Err(result::get_err(&rs)); }
-
-    // extract the port over which we read
-    let read_po = result::unwrap(rs);
+    // begin continuous read; abort if unable, extract port over which to read otherwise
+    let read_po = match sock.read_start() {
+        result::Err(e) => return result::Err(e),
+        result::Ok(rs) => rs,
+    };
     let reader = io::stdin();
+
     loop {
         // get user request
         print("> ");
