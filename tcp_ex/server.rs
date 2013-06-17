@@ -1,13 +1,17 @@
-extern mod core;
 extern mod std;
+extern mod extra;
 
-use core::comm::*;
-use comm = core::comm;
+use std::comm::*;
+use comm = std::comm;
+use std::str::*;
+use str = std::str;
+use result = std::result;
+use task = std::task;
 
-use std::net::*;
+use extra::net::*;
 use ip = net_ip;
 use tcp = net_tcp;
-use std::uv;
+use extra::uv;
 
 enum MyResult {
     MyErr(int),
@@ -42,7 +46,10 @@ fn process_request(request : ~[u8]) -> MyResult {
         // if "q", then disconnect normally (exit(0))
         ~"q" => MyErr(0),
         // otherwise, the only processing we do here is change the message a bit
-        _ => MyQueryResult(str::to_bytes(fmt!("server did some computation on \"%s\"", from_client))),
+        _ => {
+            let msg = fmt!("server did some computation on \"%s\"", from_client);
+            MyQueryResult(msg.bytes_iter().collect::<~[u8]>())
+        }
     }
 }
 

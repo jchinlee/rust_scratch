@@ -1,10 +1,14 @@
 extern mod std;
-extern mod core;
+extern mod extra;
 
-use std::net::*;
+use str = std::str;
+use result = std::result;
+use io = std::io;
+
+use extra::net::*;
 use ip = net_ip;
 use tcp = net_tcp;
-use std::uv;
+use extra::uv;
 
 /**
  * Parse user input string and transform into bytes.
@@ -19,7 +23,7 @@ use std::uv;
  */
 fn process_input(input : ~str) -> ~[u8] {
     // no parsing, actually ; just direct conversion
-    str::to_bytes(input)
+    input.bytes_iter().collect::<~[u8]>()
 }
 
 /**
